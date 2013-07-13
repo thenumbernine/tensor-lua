@@ -24,11 +24,11 @@ x = tensor.Tensor(dim, {
 --]]
 
 -- [[ coordinate basis
-local coordBasis = {unpack(table.map(coords, function(x)
+local coordBasis = setmetatable(table.map(coords, function(x)
 	return function(y)
 		return symmath.diff(y, x)
 	end
-end))}
+end), nil)
 --]]
 --[[ non-coordinate basis
 local coordBasis = {

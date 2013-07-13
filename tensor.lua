@@ -10,11 +10,11 @@ end
 TensorLayer = class()
 
 function TensorLayer:__tostring()
-	local s = table()
+	local s = {}
 	for i=1,self.layerDim do
-		s:insert(tostring(self[i]))
+		table.insert(s, tostring(self[i]))
 	end
-	return '{' .. s:concat(',') .. '}'
+	return '{' .. table.concat(s, ',') .. '}'
 end
 
 --[[
@@ -26,7 +26,9 @@ a:elem(1,2,3) or a:elem{1,2,3} work
 --]]
 function TensorLayer:elem(...)
 	local indexes = {...}
-	if type(indexes[1]) == 'table' then indexes = table(indexes[1]) end
+	if type(indexes[1]) == 'table' then 
+		indexes = {unpack(indexes[1])}
+	end
 	local index = table.remove(indexes, 1)
 	local value = self[index]
 	if #indexes > 0 then
@@ -45,7 +47,7 @@ function TensorLayer:setElem(...)
 	local value
 	if type(indexes[1]) == 'table' then
 		value = indexes[2]
-		indexes = table(indexes[1])
+		indexes = {unpack(indexes[1])}
 	else
 		value = table.remove(indexes)
 	end
@@ -59,8 +61,8 @@ function TensorLayer:setElem(...)
 end
 
 function TensorLayer:layerLowerElem(indexes, lowers, m)
-	indexes = table(indexes)
-	lowers = table(lowers)
+	indexes = {unpack(indexes)}
+	lowers = {unpack(lowers)}
 	local index = table.remove(indexes, 1)
 	local lower = table.remove(lowers, 1)
 	if lower then
@@ -119,7 +121,7 @@ c_ij = a_ik * b_kj is a multiplication then a contraction along the 'k' index
 
 --]]
 function Tensor:init(...)
-	local args = table{...}	-- support Tensor(mu,nu,...)
+	local args = {...}	-- support Tensor(mu,nu,...)
 	
 	local values
 	if type(args[1]) == 'table' then
@@ -140,7 +142,7 @@ function Tensor:init(...)
 	self.rank = #args
 	assert(self.rank > 0, "I don't support rank-0 tensors.  You need to provide at least one dimension.  If you were trying to use a true 0-rank tensor, just use a scalar.")
 
-	self.dim = table()
+	self.dim = {}
 	for i=1,self.rank do
 		self.dim[i] = args[i]
 	end
@@ -342,9 +344,9 @@ function Tensor:trace(i,j)
 		error("tried to apply tensor contraction across indices of differing dimension: "..i.."th and "..j.."th of "..table.concat(self.dim, ','))
 	end
 	
-	local newdim = table(self.dim)
+	local newdim = {unpack(self.dim)}
 	-- remove the second index from the new dimension
-	local removedDim = newdim:remove(j)
+	local removedDim = table.remove(newdim,j)
 	-- keep track of where the first index is in the new dimension
 	local newdimI = i
 	if j < i then newdimI = newdimI - 1 end
@@ -353,7 +355,7 @@ function Tensor:trace(i,j)
 		local indexes = {...}
 		-- now when we reference the unremoved dimension
 
-		local srcIndexes = table(indexes)
+		local srcIndexes = {unpack(indexes)}
 		table.insert(srcIndexes, j, indexes[newdimI])
 		
 		return self:elem(srcIndexes)
@@ -377,7 +379,7 @@ function Tensor:transformIndex(ti, m)
 		
 		local result = 0
 		for vi=1,m.dim[1] do
-			local vis = table(is)
+			local vis = {unpack(is)}
 			vis[ti] = vi
 			result = result + m:elem(vxi, vi) * self:elem(vis)
 		end
@@ -394,7 +396,7 @@ whether or not that slows things down as much, I don't know
 --]]
 function Tensor:lowerElem(indexes, lowers, m)
 	if not m then m = self.metricInverse end
-	return self:layerLowerElem(table(indexes), table(lowers), m)
+	return self:layerLowerElem({unpack(indexes)}, {unpack(lowers)}, m)
 end
 
 --[[
@@ -414,8 +416,8 @@ function Tensor:contraction(i)
 		return result
 	end
 
-	local newdim = table(self.dim)
-	local removedDim = newdim:remove(i)
+	local newdim = {unpack(self.dim)}
+	local removedDim = table.remove(newdim,i)
 	
 	return Tensor(newdim, function(...)
 		local indexes = {...}
@@ -494,7 +496,7 @@ unless they have a '_' prefix denoting that they are lower
 local function prepareRepIndexes(indexes)
 
 	local function handleTable(indexes)
-		indexes = table(indexes)
+		indexes = {unpack(indexes)}
 		local comma = false
 		for i=1,#indexes do
 			if type(indexes[i]) == 'number' then
@@ -556,7 +558,7 @@ local function prepareRepIndexes(indexes)
 		else
 			local lower = false
 			local comma = false
-			indexes = table()
+			indexes = {}
 			for i=1,#indexString do
 				local ch = indexString:sub(i,i)
 				if ch == '^' then
@@ -567,13 +569,13 @@ local function prepareRepIndexes(indexes)
 					comma = true
 				else
 					if tonumber(ch) ~= nil then
-						indexes:insert(TensorIndex{
+						table.insert(indexes, TensorIndex{
 							number = tonumber(ch),
 							lower = lower,
 							comma = comma,
 						})
 					else
-						indexes:insert(TensorIndex{
+						table.insert(indexes, TensorIndex{
 							symbol = ch,
 							lower = lower,
 							comma = comma,
@@ -631,7 +633,7 @@ end
 -- so pass a variable for comma derivative to apply diff()
 -- and pass a function for it to apply that function
 function Tensor:setCoordinateBasis(...)
-	self.coordinateBasis = table{...}
+	self.coordinateBasis = {...}
 end
 
 -- set the default that all tensors will use
@@ -665,13 +667,13 @@ function TensorRepresentation:init(tensor, indexes)
 
 --print('rep provided with tensor '..tensor..' and indexes '..table(indexes):map(tostring):concat())
 	
-	local commaIndexes = table()
-	local nonCommaIndexes = table()
+	local commaIndexes = {}
+	local nonCommaIndexes = {}
 	for i,index in ipairs(indexes) do
 		if index.comma then
-			commaIndexes:insert(i)
+			table.insert(commaIndexes, i)
 		else
-			nonCommaIndexes:insert(i)
+			table.insert(nonCommaIndexes, i)
 		end
 	end
 
@@ -679,7 +681,7 @@ function TensorRepresentation:init(tensor, indexes)
 	-- make sure indexes match rank
 	if not isTensor(tensor) then
 		if #indexes > 0 then
-				error("tried to apply "..#indexes.." indexes to a 0-rank tensor (a scalar): "..tostring(tensor))
+			error("tried to apply "..#indexes.." indexes to a 0-rank tensor (a scalar): "..tostring(tensor))
 		end
 		if #nonCommaIndexes ~= 0 then
 			error("Tensor.rep non-tensor needs as zero non-comma indexes as the tensor's rank.  Found "..#nonCommaIndexes.." but needed "..0)
@@ -729,9 +731,9 @@ function TensorRepresentation:init(tensor, indexes)
 	... which do we want to accept as the standard?
 	--]]
 	if #commaIndexes > 0 then
-		local newdim = table(tensor.dim)
+		local newdim = {unpack(tensor.dim)}
 		for i=1,#commaIndexes do
-			newdim:insert(#tensor.coordinateBasis)
+			table.insert(newdim, #tensor.coordinateBasis)
 		end
 --print('before differentiation: '..tensor)
 		assert(tensor.coordinateBasis, "cannot use comma derivative without a coordinate basis")
@@ -740,13 +742,13 @@ function TensorRepresentation:init(tensor, indexes)
 		tensor = Tensor(newdim, function(...)
 			local is = {...}
 			-- pick out 
-			local base = table()
-			local deriv = table()
+			local base = {}
+			local deriv = {}
 			for i=1,#is do
 				if indexes[i].comma then
-					deriv:insert(is[i])
+					table.insert(deriv,is[i])
 				else
-					base:insert(is[i])
+					table.insert(base,is[i])
 				end
 			end
 			local x = tensor:elem(unpack(base))
@@ -777,8 +779,8 @@ function TensorRepresentation:init(tensor, indexes)
 			end
 		end
 		if foundNumbers then
-			local newdim = table(tensor.dim)
-			local srcIndexes = table(indexes)
+			local newdim = {unpack(tensor.dim)}
+			local srcIndexes = {unpack(indexes)}
 			local sis = {}
 			for i=#tensor.dim,1,-1 do
 				if indexes[i].number then
@@ -811,7 +813,7 @@ function TensorRepresentation:init(tensor, indexes)
 	end	
 
 	self.tensor = assert(tensor)
-	self.indexes = indexes:map(TensorIndex.clone)
+	self.indexes = setmetatable(table.map(indexes, TensorIndex.clone), nil)
 	
 	-- for all indexes
 	
@@ -826,7 +828,7 @@ function TensorRepresentation:init(tensor, indexes)
 			for j=i+1,#self.indexes do
 				if self.indexes[i] == self.indexes[j] then
 					self.tensor = self.tensor:trace(i,j)
-					self.indexes:remove(j)	-- remove one of the two matching indices
+					table.remove(self.indexes,j)	-- remove one of the two matching indices
 					modified = true
 					break
 				end
@@ -938,20 +940,20 @@ function TensorRepresentation.__mul(a,b)
 				if type(sa.index) ~= 'number' and sa.index == sb.index then
 					assert(tensorA.dim[ai] == tensorB.dim[bi], "you can't pair indexes of unmatching dimension!")
 					if not indexPairs[sa.index] then 
-						indexPairs[sa.index] = table{
-							alocs=table(),
-							blocs=table(),
+						indexPairs[sa.index] = {
+							alocs={},
+							blocs={},
 							dim=tensorA.dim[ai],
 						}
 					end
-					indexPairs[sa.index].alocs:insertUnique(ai)
-					indexPairs[sb.index].blocs:insertUnique(bi)
+					table.insertUnique(indexPairs[sa.index].alocs,ai)
+					table.insertUnique(indexPairs[sb.index].blocs,bi)
 				end
 			end
 		end
 		
-		local newIndexes = table()
-		local newdim = table()
+		local newIndexes = {}
+		local newdim = {}
 		local foundPairs = {}
 		local function processStats(stats, dim, srcIndexes)
 			for i,st in ipairs(stats) do
@@ -974,7 +976,7 @@ function TensorRepresentation.__mul(a,b)
 						local indexNumber, indexSymbol
 						if type(st.index) == 'string' then indexSymbol = st.index end
 						if type(st.index) == 'number' then indexNumber = st.index end
-						newIndexes:insert(TensorIndex{
+						table.insert(newIndexes,TensorIndex{
 							symbol = indexSymbol,
 							number = indexNumber,
 							lower = st.lower,
@@ -983,7 +985,7 @@ function TensorRepresentation.__mul(a,b)
 							foundPairs[st.index] = #newIndexes
 						end
 						st.dstIndex = #newIndexes
-						newdim:insert(dim[i])
+						table.insert(newdim,dim[i])
 					else
 						st.dstIndex = foundPairs[st.index]
 					end
@@ -1035,7 +1037,7 @@ function TensorRepresentation.__mul(a,b)
 end
 
 local function commonIndices(indexesA, indexesB)
-	local indexes = table(indexesA)	-- start with A, filter out what's not in B
+	local indexes = {unpack(indexesA)}	-- start with A, filter out what's not in B
 	for i=#indexes,1,-1 do
 		if not table.find(indexesB, indexes[i]) then table.remove(indexes, i) end
 	end
@@ -1091,7 +1093,7 @@ function TensorRepresentation.__eq(a,b)
 end
 
 function TensorRepresentation:__tostring()
-	return '['..tostring(self.tensor)..']'..self.indexes:map(tostring):concat()
+	return '['..tostring(self.tensor)..']'..table.map(self.indexes, tostring):concat()
 end
 
 TensorRepresentation.__concat = concatToString
@@ -1119,7 +1121,7 @@ function TensorRepresentation:assign(indexes)
 
 	if not isTensor(self.tensor) then
 		if #indexes ~= 0 then
-			error("tried to index a 0-rank tensor (a scalar): "..tostring(self.tensor).." with indexes "..indexes:map(tostring):concat())
+			error("tried to index a 0-rank tensor (a scalar): "..tostring(self.tensor).." with indexes "..table.map(indexes,tostring):concat())
 		end
 		return self.tensor
 	end
@@ -1136,7 +1138,7 @@ function TensorRepresentation:assign(indexes)
 	end
 	
 	local srcTensor = self.tensor:clone()
-	local srcIndexes = self.indexes:map(TensorIndex.clone)
+	local srcIndexes = setmetatable(table.map(self.indexes, TensorIndex.clone), nil)
 	for i=#srcIndexes,1,-1 do
 		local index = srcIndexes[i]
 		if not table.find(indexes, index) then

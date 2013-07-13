@@ -20,12 +20,15 @@ function notebook(cmd)
 				print(err)
 			else
 				local func = ok
-				local result = {pcall(func)}	-- scope? all global, right? unless 'local' is added on...
+				local errmsg
+				local result = {xpcall(func, function(err)
+					errmsg = err .. '\n' .. debug.traceback()
+				end)}	-- scope? all global, right? unless 'local' is added on...
 				local duration = os.time() - startTime
-				if #result == 2 and not result[1] then
-					io.write(result[2]..'\n'..debug.traceback())
+				if errmsg then
+					io.write(errmsg)
 				else
-					if #result > 0 or result[1] ~= nil then
+					if #result > 0 then
 						io.write(table.concat(table.map(result, tostring),'\t')..'\t')
 					end
 				end
