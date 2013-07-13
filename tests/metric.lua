@@ -1,6 +1,36 @@
+--[[
+
+    File: metric.lua 
+
+    Copyright (C) 2000-2013 Christopher Moore (christopher.e.moore@gmail.com)
+	  
+    This software is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+  
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+  
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write the Free Software Foundation, Inc., 51
+    Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+--]]
+
+
+
 require 'symmath'
 require 'tensor'
 require 'tensor.notebook'
+
+local function simplifyTensor(t)
+	return tensor.Tensor(t.dim, function(i,j)
+		return symmath.simplify(t:elem(i,j))
+	end)
+end
 
 -- [[ polar
 r = symmath.Variable('r')
@@ -24,11 +54,11 @@ x = tensor.Tensor(dim, {
 --]]
 
 -- [[ coordinate basis
-local coordBasis = setmetatable(table.map(coords, function(x)
+local coordBasis = {unpack(table.map(coords, function(x)
 	return function(y)
 		return symmath.diff(y, x)
 	end
-end), nil)
+end))}
 --]]
 --[[ non-coordinate basis
 local coordBasis = {
@@ -45,8 +75,8 @@ print('x = '..x)
 
 local e = table()
 for i,coord in ipairs(coords) do
-	e[i] = coordBasis[i](x)
-	print('e_'..coords[i].name..' = '..e[i])
+	e[i] = symmath.simplify(coordBasis[i](x))
+	print('e_'..coords[i].name..' = '..coordBasis[i](x)..' = '..symmath.simplify(coordBasis[i](x)))
 end
 
 
@@ -60,6 +90,7 @@ do
 		for j, coordj in ipairs(coords) do
 			print('[e_'..coordi.name..',e_'..coordj.name..'] = '..
 				coordBasis[i](coordBasis[j](a)) - coordBasis[j](coordBasis[i](a))
+				..' = '..symmath.simplify(coordBasis[i](coordBasis[j](a)) - coordBasis[j](coordBasis[i](a)))
 			)
 			
 			-- now reproject them into the coordinate frame (the e's)
@@ -69,27 +100,22 @@ do
 end
 
 -- if E is a matrix with column vectors the basis vectors e_* then E * E^T = g
-g = tensor.Tensor(dim,dim,function(i,j)
+g = simplifyTensor(tensor.Tensor(dim,dim,function(i,j)
 	local ei = assert(e[i])
 	local ej = assert(e[j])
 	return (ei'i' * ej'i')''
-end)
+end))
 print('g = '..g)
 
-do return end
-
-
-
-
 -- assume the metric is diagonal, so inverting it is simply inverting the diagonal components...
-gInv = tensor.Tensor(dim,dim,function(i,j)
+gInv = simplifyTensor(tensor.Tensor(dim,dim,function(i,j)
 	if i ~= j then
 		assert(g:elem(i,j) == symmath.Constant(0))
 		return 0
 	else
-		return 1 / g:elem(i,j)
+		return symmath.simplify(1 / g:elem(i,j))
 	end
-end)
+end))
 
 --[[
 -- here's an issue ...
@@ -115,7 +141,9 @@ tensor.Tensor:setMetric(g)
 so how do we perform operations on the metric?
 --]]
 print('g^ij = '..g'^ij')
-print('g_ij = '..g'_ij')	
+print('g_ij = '..g'_ij')
+
+do return end
 
 --[[
 for polar, g_phi_phi_,r = 2*r, all else is zero
