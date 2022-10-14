@@ -43,7 +43,7 @@ function TensorRepresentation:init(tensor, indexes)
 	end
 	
 	-- make sure indexes match rank
-	if not Tensor.is(tensor) then
+	if not Tensor:isa(tensor) then
 		if #indexes > 0 then
 			error("tried to apply "..#indexes.." indexes to a 0-rank tensor (a scalar): "..tostring(tensor))
 		end
@@ -479,7 +479,7 @@ function TensorRepresentation:assign(indexes)
 		assert(not index.comma, "can't assign to comma indexes")
 	end
 
-	if not Tensor.is(self.tensor) then
+	if not Tensor:isa(self.tensor) then
 		if #indexes ~= 0 then
 			error("tried to index a 0-rank tensor (a scalar): "..tostring(self.tensor).." with indexes "..table.map(indexes,tostring):concat())
 		end
@@ -509,7 +509,7 @@ function TensorRepresentation:assign(indexes)
 	
 	-- no need to relabel indexes if we have nothing left
 	if #srcIndexes == 0 then
-		assert(not Tensor.is(srcTensor))		--assert(type(srcTensor) == 'number')
+		assert(not Tensor:isa(srcTensor))		--assert(type(srcTensor) == 'number')
 		return srcTensor
 	end
 	

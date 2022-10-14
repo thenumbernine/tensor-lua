@@ -1,33 +1,11 @@
---[[
-
-    File: metric.lua 
-
-    Copyright (C) 2000-2013 Christopher Moore (christopher.e.moore@gmail.com)
-	  
-    This software is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-  
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-  
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write the Free Software Foundation, Inc., 51
-    Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
---]]
-
-
-
-require 'symmath'
-require 'tensor'
-require 'tensor.notebook'
+#!/usr/bin/env lua
+--local notebook = require 'tensor.notebook'
+local table = require 'ext.table'
+local symmath = require 'symmath'
+local Tensor = require 'tensor'
 
 local function simplifyTensor(t)
-	return tensor.Tensor(t.dim, function(i,j)
+	return Tensor(t.dim, function(i,j)
 		return symmath.simplify(t:elem(i,j))
 	end)
 end
@@ -37,7 +15,7 @@ r = symmath.Variable('r')
 phi = symmath.Variable('phi')
 coords = {r, phi}
 dim = #coords
-x = tensor.Tensor(dim, {r * symmath.cos(phi), r * symmath.sin(phi)})
+x = Tensor(dim, {r * symmath.cos(phi), r * symmath.sin(phi)})
 --]]
 
 --[[ spherical
@@ -46,7 +24,7 @@ theta = symmath.Variable('theta')
 phi = symmath.Variable('phi')
 coords = {r, theta, phi}
 dim = #coords
-x = tensor.Tensor(dim, {
+x = Tensor(dim, {
 	r * symmath.cos(phi) * symmath.sin(theta),
 	r * symmath.sin(phi) * symmath.sin(theta),
 	r * symmath.cos(theta)
@@ -54,7 +32,7 @@ x = tensor.Tensor(dim, {
 --]]
 
 -- [[ coordinate basis
-local coordBasis = {unpack(table.map(coords, function(x)
+local coordBasis = {table.unpack(table.map(coords, function(x)
 	return function(y)
 		return symmath.diff(y, x)
 	end
@@ -66,7 +44,7 @@ local coordBasis = {
 	function(y) return symmath.diff(y, phi) * (1/r) end,
 }
 --]]
-tensor.Tensor:setCoordinateBasis(unpack(coordBasis))
+Tensor:setCoordinateBasis(table.unpack(coordBasis))
 
 print('x = '..x)
 
@@ -81,7 +59,7 @@ end
 
 
 do
-	local a = tensor.Tensor(dim, function(i)
+	local a = Tensor(dim, function(i)
 		local v = symmath.Variable('a'..i)
 		v.deferDiff = true
 		return v
@@ -100,7 +78,7 @@ do
 end
 
 -- if E is a matrix with column vectors the basis vectors e_* then E * E^T = g
-g = simplifyTensor(tensor.Tensor(dim,dim,function(i,j)
+g = simplifyTensor(Tensor(dim,dim,function(i,j)
 	local ei = assert(e[i])
 	local ej = assert(e[j])
 	return (ei'i' * ej'i')''
@@ -108,7 +86,7 @@ end))
 print('g = '..g)
 
 -- assume the metric is diagonal, so inverting it is simply inverting the diagonal components...
-gInv = simplifyTensor(tensor.Tensor(dim,dim,function(i,j)
+gInv = simplifyTensor(Tensor(dim,dim,function(i,j)
 	if i ~= j then
 		assert(g:elem(i,j) == symmath.Constant(0))
 		return 0
@@ -129,13 +107,13 @@ g, gInv = gInv, g
 the metric inverse is used to transform from lower to upper during assignment
 the elements specified are covariant (they abide by the transformation laws of the Tensor class)
 --]]
-tensor.Tensor:setMetricInverse(gInv)
+Tensor:setMetricInverse(gInv)
 
 --[[
 now g has to have the the inverse elements of gInv
 however it will appear inverted of what its elements should be (g^ij will be g_ij)
 --]]
-tensor.Tensor:setMetric(g)
+Tensor:setMetric(g)
 
 --[[
 so how do we perform operations on the metric?
@@ -201,7 +179,7 @@ a^r_;phi = a^r_,phi + gamma^r_u_phi * a^u = 0 + -r^3 = -r^3
 a^phi_;r = a^phi_,r + gamma^phi_u_r * a^u = 2*r + r = 3*r
 a^phi_;phi = a^phi_,phi + gamma^phi_u_phi * a^u = 0 + 1 = 1
 --]]
-a = tensor.Tensor(dim, function(i) return r^i end)
+a = Tensor(dim, function(i) return r^i end)
 print('a = '..a)
 print('a^i_,x = '..a'i_,x''ix')
 print('a^i_;x = '..covariantDerivative(a))
