@@ -1,4 +1,0 @@
-my first take at a tensor calculator in lua
-made to eventually work with my symbolic lua utility at http://github.com/thenumbernine/symmath-lua
-...but i made this one first, so all it is good for is shorthand numeric tensor calculations
-demo at http://christopheremoore.net/tensor-calculator
