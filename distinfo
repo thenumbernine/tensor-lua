@@ -1,0 +1,25 @@
+--------------------------------------------
+-- generated with dist/build-distinfo.rua --
+--------------------------------------------
+
+name = "tensor"
+files = {
+	["LICENSE"] = "tensor/LICENSE",
+	["README.md"] = "tensor/README.md",
+	["delta.lua"] = "tensor/delta.lua",
+	["index.lua"] = "tensor/index.lua",
+	["layer.lua"] = "tensor/layer.lua",
+	["matrix.lua"] = "tensor/matrix.lua",
+	["notebook.lua"] = "tensor/notebook.lua",
+	["representation.lua"] = "tensor/representation.lua",
+	["tensor.lua"] = "tensor/tensor.lua",
+	["tensor.rockspec"] = "tensor/tensor.rockspec",
+	["tests/delta.lua"] = "tensor/tests/delta.lua",
+	["tests/inverse.lua"] = "tensor/tests/inverse.lua",
+	["tests/metric.lua"] = "tensor/tests/metric.lua",
+	["tests/test.lua"] = "tensor/tests/test.lua",
+}
+deps = {
+	"ext",
+	"symmath",
+}
